@@ -4,7 +4,7 @@ import React, { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { signUpWithEmail } from "@/lib/actions";
+import { signUpWithEmail, signInWithGitHub } from "@/lib/actions";
 
 type FieldErrors = Record<string, string[] | string | undefined>;
 
@@ -38,107 +38,124 @@ const SignUpForm = () => {
   }, [state]);
 
   return (
-    <form action={formAction} className="startup-form !my-0 !max-w-md">
-      <div>
-        <label htmlFor="name" className="startup-form_label">
-          Name
-        </label>
-        <Input
-          id="name"
-          name="name"
-          className="startup-form_input"
-          required
-          placeholder="Jane Doe"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        {fieldError(fieldErrors, "name") && (
-          <p className="startup-form_error">
-            {fieldError(fieldErrors, "name")}
-          </p>
-        )}
+    <div className="w-full max-w-md space-y-6">
+      <form action={formAction} className="startup-form !my-0 !max-w-md">
+        <div>
+          <label htmlFor="name" className="startup-form_label">
+            Name
+          </label>
+          <Input
+            id="name"
+            name="name"
+            className="startup-form_input"
+            required
+            placeholder="Jane Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          {fieldError(fieldErrors, "name") && (
+            <p className="startup-form_error">
+              {fieldError(fieldErrors, "name")}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="username" className="startup-form_label">
+            Username
+          </label>
+          <Input
+            id="username"
+            name="username"
+            className="startup-form_input"
+            required
+            placeholder="janedoe"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          {fieldError(fieldErrors, "username") && (
+            <p className="startup-form_error">
+              {fieldError(fieldErrors, "username")}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="email" className="startup-form_label">
+            Email
+          </label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            className="startup-form_input"
+            required
+            placeholder="jane@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          {fieldError(fieldErrors, "email") && (
+            <p className="startup-form_error">
+              {fieldError(fieldErrors, "email")}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="password" className="startup-form_label">
+            Password
+          </label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            className="startup-form_input"
+            required
+            minLength={8}
+            placeholder="At least 8 characters"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {fieldError(fieldErrors, "password") && (
+            <p className="startup-form_error">
+              {fieldError(fieldErrors, "password")}
+            </p>
+          )}
+        </div>
+
+        {state.error && <p className="startup-form_error">{state.error}</p>}
+
+        <Button
+          type="submit"
+          className="startup-form_btn text-white"
+          disabled={isPending}
+        >
+          {isPending ? "Creating account..." : "Sign Up"}
+        </Button>
+
+        <p className="text-center text-16-medium">
+          Already have an account?{" "}
+          <Link href="/login" className="text-primary underline">
+            Log in
+          </Link>
+        </p>
+      </form>
+
+      <div className="flex items-center gap-3 max-w-2xl mx-auto">
+        <span className="h-px flex-1 bg-black-300/30" />
+        <span className="text-14-normal !text-black-300">or</span>
+        <span className="h-px flex-1 bg-black-300/30" />
       </div>
 
-      <div>
-        <label htmlFor="username" className="startup-form_label">
-          Username
-        </label>
-        <Input
-          id="username"
-          name="username"
-          className="startup-form_input"
-          required
-          placeholder="janedoe"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        {fieldError(fieldErrors, "username") && (
-          <p className="startup-form_error">
-            {fieldError(fieldErrors, "username")}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="email" className="startup-form_label">
-          Email
-        </label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          className="startup-form_input"
-          required
-          placeholder="jane@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        {fieldError(fieldErrors, "email") && (
-          <p className="startup-form_error">
-            {fieldError(fieldErrors, "email")}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="password" className="startup-form_label">
-          Password
-        </label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          className="startup-form_input"
-          required
-          minLength={8}
-          placeholder="At least 8 characters"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {fieldError(fieldErrors, "password") && (
-          <p className="startup-form_error">
-            {fieldError(fieldErrors, "password")}
-          </p>
-        )}
-      </div>
-
-      {state.error && <p className="startup-form_error">{state.error}</p>}
-
-      <Button
-        type="submit"
-        className="startup-form_btn text-white"
-        disabled={isPending}
-      >
-        {isPending ? "Creating account..." : "Sign Up"}
-      </Button>
-
-      <p className="text-center text-16-medium">
-        Already have an account?{" "}
-        <Link href="/login" className="text-primary underline">
-          Log in
-        </Link>
-      </p>
-    </form>
+      <form action={signInWithGitHub} className="max-w-2xl mx-auto">
+        <button
+          type="submit"
+          className="login rounded-full w-full flex justify-center"
+        >
+          Sign up with GitHub
+        </button>
+      </form>
+    </div>
   );
 };
 
