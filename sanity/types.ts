@@ -306,6 +306,12 @@ export type STARTUP_VIEWS_QUERYResult = {
   _id: string;
   views: number | null;
 } | null;
+// Variable: STARTUP_OWNER_QUERY
+// Query: *[_type == "startup" && _id == $id][0]{        _id, "authorId": author._ref    }
+export type STARTUP_OWNER_QUERYResult = {
+  _id: string;
+  authorId: string | null;
+} | null;
 // Variable: AUTHOR_BY_GITHUB_ID_QUERY
 // Query: *[_type == "author" && id == $id][0]{    _id,    id,    name,    username,    email,    image,    bio}
 export type AUTHOR_BY_GITHUB_ID_QUERYResult = {
@@ -395,6 +401,7 @@ declare module "@sanity/client" {
     "*[_type == \"startup\" && _id != $id && defined(category) && category == $category] | order(views desc, _createdAt desc) [0...4] {\n  _id,\n  title,\n  slug,\n  _createdAt,\n  author -> {\n    _id, name, image, bio\n  },\n  views,\n  description,\n  category,\n  image,\n  \"voteCount\": count(votes),\n  \"hasVoted\": defined($userId) && $userId in votes[]._ref,\n}": STARTUP_SIMILAR_QUERYResult;
     "\n    *[_type == \"startup\" && _id == $id][0]{\n        _id, \"voterIds\": votes[]._ref\n    }\n": STARTUP_VOTES_QUERYResult;
     "\n    *[_type == \"startup\" && _id == $id][0]{\n        _id, views\n    }\n": STARTUP_VIEWS_QUERYResult;
+    "\n    *[_type == \"startup\" && _id == $id][0]{\n        _id, \"authorId\": author._ref\n    }\n": STARTUP_OWNER_QUERYResult;
     "\n*[_type == \"author\" && id == $id][0]{\n    _id,\n    id,\n    name,\n    username,\n    email,\n    image,\n    bio\n}\n": AUTHOR_BY_GITHUB_ID_QUERYResult;
     "\n*[_type == \"author\" && email == $email][0]{\n    _id,\n    id,\n    name,\n    username,\n    email,\n    image,\n    bio,\n    password\n}\n": AUTHOR_BY_EMAIL_QUERYResult;
     "\n*[_type == \"author\" && _id == $id][0]{\n    _id,\n    id,\n    name,\n    username,\n    email,\n    image,\n    bio\n}\n": AUTHOR_BY_ID_QUERYResult;

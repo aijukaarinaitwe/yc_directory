@@ -2,13 +2,18 @@
 
 import { AuthError } from "next-auth";
 import { hash } from "bcryptjs";
+import { revalidatePath } from "next/cache";
 import { auth, signIn } from "@/auth";
 import { parseServerActionResponse } from "@/lib/utils";
-import { loginSchema, signUpSchema } from "@/lib/validation";
+import { formSchema, loginSchema, signUpSchema } from "@/lib/validation";
 import slugify from "slugify";
 import { client } from "@/sanity/lib/client";
 import { writeClient } from "@/sanity/lib/write-client";
-import { AUTHOR_BY_EMAIL_QUERY, STARTUP_VOTES_QUERY } from "@/sanity/lib/queries";
+import {
+  AUTHOR_BY_EMAIL_QUERY,
+  STARTUP_OWNER_QUERY,
+  STARTUP_VOTES_QUERY,
+} from "@/sanity/lib/queries";
 
 export const createPitch = async (
   state: any,
@@ -26,6 +31,22 @@ export const createPitch = async (
   const { title, description, category, link } = Object.fromEntries(
     Array.from(form).filter(([key]) => key !== "pitch"),
   );
+
+  const parsed = await formSchema.safeParseAsync({
+    title,
+    description,
+    category,
+    link,
+    pitch,
+  });
+
+  if (!parsed.success) {
+    return parseServerActionResponse({
+      error: "Please check your inputs and try again",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+      status: "ERROR",
+    });
+  }
 
   const slug = slugify(title as string, { lower: true, strict: true });
 
@@ -50,6 +71,123 @@ export const createPitch = async (
 
     return parseServerActionResponse({
       ...result,
+      error: "",
+      status: "SUCCESS",
+    });
+  } catch (error) {
+    console.log(error);
+
+    return parseServerActionResponse({
+      error: JSON.stringify(error),
+      status: "ERROR",
+    });
+  }
+};
+
+const assertOwnsStartup = async (startupId: string, userId: string) => {
+  const startup = await client
+    .withConfig({ useCdn: false })
+    .fetch(STARTUP_OWNER_QUERY, { id: startupId });
+
+  if (!startup) return "Startup not found";
+  if (startup.authorId !== userId) return "You can only manage your own startups";
+  return null;
+};
+
+export const deleteStartup = async (startupId: string) => {
+  const session = await auth();
+
+  if (!session)
+    return parseServerActionResponse({
+      error: "Not signed in",
+      status: "ERROR",
+    });
+
+  const ownershipError = await assertOwnsStartup(startupId, session.id);
+  if (ownershipError) {
+    return parseServerActionResponse({ error: ownershipError, status: "ERROR" });
+  }
+
+  try {
+    await writeClient.delete(startupId);
+
+    revalidatePath("/");
+    revalidatePath(`/user/${session.id}`);
+
+    return parseServerActionResponse({ error: "", status: "SUCCESS" });
+  } catch (error) {
+    console.log(error);
+
+    return parseServerActionResponse({
+      error: JSON.stringify(error),
+      status: "ERROR",
+    });
+  }
+};
+
+export const updateStartup = async (
+  startupId: string,
+  state: any,
+  form: FormData,
+  pitch: string,
+) => {
+  const session = await auth();
+
+  if (!session)
+    return parseServerActionResponse({
+      error: "Not signed in",
+      status: "ERROR",
+    });
+
+  const ownershipError = await assertOwnsStartup(startupId, session.id);
+  if (ownershipError) {
+    return parseServerActionResponse({ error: ownershipError, status: "ERROR" });
+  }
+
+  const { title, description, category, link } = Object.fromEntries(
+    Array.from(form).filter(([key]) => key !== "pitch"),
+  );
+
+  const parsed = await formSchema.safeParseAsync({
+    title,
+    description,
+    category,
+    link,
+    pitch,
+  });
+
+  if (!parsed.success) {
+    return parseServerActionResponse({
+      error: "Please check your inputs and try again",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+      status: "ERROR",
+    });
+  }
+
+  const slug = slugify(title as string, { lower: true, strict: true });
+
+  try {
+    await writeClient
+      .patch(startupId)
+      .set({
+        title,
+        description,
+        category,
+        image: link,
+        slug: {
+          _type: slug,
+          current: slug,
+        },
+        pitch,
+      })
+      .commit();
+
+    revalidatePath(`/startup/${startupId}`);
+    revalidatePath("/");
+    revalidatePath(`/user/${session.id}`);
+
+    return parseServerActionResponse({
+      _id: startupId,
       error: "",
       status: "SUCCESS",
     });

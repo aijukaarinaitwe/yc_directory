@@ -10,10 +10,12 @@ import Link from "next/link";
 import Image from "next/image";
 
 import markdownit from "markdown-it";
+import { Pencil } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import View from "@/components/View";
 import StartupCard, { StartupTypeCard } from "@/components/StartupCard";
 import VoteButton from "@/components/VoteButton";
+import DeleteStartupButton from "@/components/DeleteStartupButton";
 import { auth } from "@/auth";
 
 const md = markdownit();
@@ -39,6 +41,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     : [];
 
   const parsedContent = md.render(post?.pitch || "");
+  const isOwner = !!session && session.id === post.author?._id;
 
   return (
     <>
@@ -56,8 +59,8 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           width={1280}
           height={720}
           priority
-          sizes="100vw"
-          className="w-full h-auto rounded-xl object-cover"
+          sizes="50vw"
+          className="w-1/2 h-auto mx-auto rounded-xl object-cover"
         />
 
         <div className="space-y-5 mt-10 max-w-4xl mx-auto">
@@ -90,6 +93,18 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
                 isLoggedIn={!!session}
               />
               <p className="category-tag">{post.category}</p>
+              {isOwner && (
+                <>
+                  <Link
+                    href={`/startup/${post._id}/edit`}
+                    className="flex items-center gap-1.5 rounded-full border-2 border-black bg-white px-4 py-1.5 font-medium text-14-normal !text-black"
+                  >
+                    <Pencil className="size-4" />
+                    Edit
+                  </Link>
+                  <DeleteStartupButton startupId={post._id} />
+                </>
+              )}
             </div>
           </div>
 

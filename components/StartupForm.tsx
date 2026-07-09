@@ -11,7 +11,7 @@ import { formSchema } from "@/lib/validation";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { createPitch } from "@/lib/actions";
+import { createPitch, updateStartup } from "@/lib/actions";
 import ImageUpload from "@/components/ImageUpload";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), {
@@ -19,13 +19,31 @@ const MDEditor = dynamic(() => import("@uiw/react-md-editor"), {
   loading: () => <Skeleton className="mt-3 h-[300px] w-full rounded-[20px]" />,
 });
 
-const StartupForm = () => {
+interface StartupFormProps {
+  mode?: "create" | "edit";
+  startupId?: string;
+  initialValues?: {
+    title: string;
+    description: string;
+    category: string;
+    image: string;
+    pitch: string;
+  };
+}
+
+const StartupForm = ({
+  mode = "create",
+  startupId,
+  initialValues,
+}: StartupFormProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [pitch, setPitch] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [title, setTitle] = useState(initialValues?.title ?? "");
+  const [description, setDescription] = useState(
+    initialValues?.description ?? "",
+  );
+  const [category, setCategory] = useState(initialValues?.category ?? "");
+  const [pitch, setPitch] = useState(initialValues?.pitch ?? "");
+  const [imageUrl, setImageUrl] = useState(initialValues?.image ?? "");
   const [isImageUploading, setIsImageUploading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -42,15 +60,28 @@ const StartupForm = () => {
 
       await formSchema.parseAsync(formValues);
 
-      const result = await createPitch(prevState, formData, pitch);
+      const result =
+        mode === "edit" && startupId
+          ? await updateStartup(startupId, prevState, formData, pitch)
+          : await createPitch(prevState, formData, pitch);
 
       if (result.status == "SUCCESS") {
         toast({
           title: "Success",
-          description: "Your startup pitch has been created successfully",
+          description:
+            mode === "edit"
+              ? "Your startup pitch has been updated successfully"
+              : "Your startup pitch has been created successfully",
         });
 
         router.push(`/startup/${result._id}`);
+      } else if (result.fieldErrors) {
+        setErrors(result.fieldErrors as Record<string, string>);
+        toast({
+          title: "Error",
+          description: "Please check your inputs and try again",
+          variant: "destructive",
+        });
       }
 
       return result;
@@ -198,8 +229,12 @@ const StartupForm = () => {
         {isImageUploading
           ? "Uploading image..."
           : isPending
-            ? "Submitting..."
-            : "Submit Your Pitch"}
+            ? mode === "edit"
+              ? "Saving..."
+              : "Submitting..."
+            : mode === "edit"
+              ? "Save Changes"
+              : "Submit Your Pitch"}
         <Send className="size-6 ml-2" />
       </Button>
     </form>
